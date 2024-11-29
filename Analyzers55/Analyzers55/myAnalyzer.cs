@@ -23,7 +23,8 @@ namespace Sample.Analyzers
         private const string DiagnosticId = "ALERRRRRRRTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
         private const string Title = "Declare explicit type for local declarations.";
         private static readonly Regex UpperCamelCaseRegex = new Regex(@"^([A-Z][a-z]*[0-9]*)+$", RegexOptions.Compiled);
-        private static readonly Regex lowerCamelCaseRegex = new Regex(@"^[a-z]+[0-9]*([A-Z][a-z0-9]*)$", RegexOptions.Compiled);
+        private static readonly Regex lowerCamelCaseRegex = new Regex(@"^[a-z]+[0-9]*([A-Z][a-z]*[0-9]*)*$", RegexOptions.Compiled);
+        private static readonly Regex SNAKE_CASE_REGEX = new Regex(@"^[A-Z]+([_][A-Z]+)*$", RegexOptions.Compiled);
         public const string MessageFormat =
             "Local '{0}' is implicitly typed. Consider specifying its type explicitly in the declaration.";
 
@@ -55,9 +56,90 @@ namespace Sample.Analyzers
             //context.RegisterSyntaxNodeAction(AnalyzeObjCreation,SyntaxKind.ObjectCreationExpression);
             context.RegisterSyntaxNodeAction(AnalyzeClassDeclaration, SyntaxKind.ClassDeclaration);
             context.RegisterSyntaxNodeAction(AnalyzeIdentifierName, SyntaxKind.IdentifierName);
+            context.RegisterSyntaxNodeAction(AnalyzeMethodDeclaration, SyntaxKind.MethodDeclaration);
+            context.RegisterSyntaxNodeAction(AnalyzeInvocationExpression, SyntaxKind.InvocationExpression);
+            context.RegisterSyntaxNodeAction(AnalyzeLocalDeclaration, SyntaxKind.LocalDeclarationStatement);
+            context.RegisterSyntaxNodeAction(AnalyzeGlobaclConstDeclaration,SyntaxKind.FieldDeclaration);
         }
 
-        
+      
+        private static void AnalyzeGlobaclConstDeclaration(SyntaxNodeAnalysisContext context)
+        {
+            var fieldDeclaration = (FieldDeclarationSyntax)context.Node;
+
+            // Check for 'const' modifier
+            if (!fieldDeclaration.Modifiers.Any(SyntaxKind.ConstKeyword))
+                return;
+
+            foreach (var variable in fieldDeclaration.Declaration.Variables)
+            {
+                var name = variable.Identifier.Text;
+
+                if (!SNAKE_CASE_REGEX.IsMatch(name))
+                {
+                    var diagnostic = Diagnostic.Create(Rule, variable.Identifier.GetLocation(), name);
+                    context.ReportDiagnostic(diagnostic);
+                }
+            }
+        }
+        private static void AnalyzeLocalDeclaration(SyntaxNodeAnalysisContext context)
+        {
+            var localDeclaration = (LocalDeclarationStatementSyntax)context.Node;
+            foreach (var variable in localDeclaration.Declaration.Variables)
+            {
+                // issue rule upon every local variable that its identifier doesnt follow low camel case
+                if (!lowerCamelCaseRegex.IsMatch(variable.Identifier.ValueText))
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(Rule, variable.Identifier.GetLocation(), variable.Identifier.ValueText));
+                }
+            }
+        }
+        private static void AnalyzeInvocationExpression(SyntaxNodeAnalysisContext context)
+        {
+            var invocationExpr = (InvocationExpressionSyntax)context.Node;
+            var expression = invocationExpr.Expression;
+
+            ISymbol symbol = null;
+
+            if (expression is IdentifierNameSyntax identifierNameSyntax)
+            {
+                symbol = context.SemanticModel.GetSymbolInfo(identifierNameSyntax).Symbol;
+                if (symbol is IMethodSymbol methodSymbol &&
+                    identifierNameSyntax.Identifier.Text == methodSymbol.Name && UpperCamelCaseRegex.IsMatch(identifierNameSyntax.Identifier.Text)==false)
+                {
+                    var methodName = identifierNameSyntax.Identifier.Text;
+                    var diagnostic = Diagnostic.Create(Rule, identifierNameSyntax.Identifier.GetLocation(), methodName);
+                    context.ReportDiagnostic(diagnostic);
+                }
+            }
+            else if (expression is MemberAccessExpressionSyntax memberAccessExpr)
+            {
+                var nameSyntax = memberAccessExpr.Name;
+                if (nameSyntax is IdentifierNameSyntax nameIdentifier)
+                {
+                    symbol = context.SemanticModel.GetSymbolInfo(nameIdentifier).Symbol;
+                    if (symbol is IMethodSymbol methodSymbol &&
+                        nameIdentifier.Identifier.Text == methodSymbol.Name 
+                        && UpperCamelCaseRegex.IsMatch(nameIdentifier.Identifier.Text)==false)
+                    {
+                        var methodName = nameIdentifier.Identifier.Text;
+                        var diagnostic = Diagnostic.Create(Rule, nameIdentifier.Identifier.GetLocation(), methodName);
+                        context.ReportDiagnostic(diagnostic);
+                    }
+                }
+            }
+        }
+    
+        private static void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
+        {
+            var methodDeclaration = (MethodDeclarationSyntax)context.Node;
+            var methodName = methodDeclaration.Identifier.Text;
+            if (UpperCamelCaseRegex.IsMatch(methodName) == false)
+            {
+                var diagnostic = Diagnostic.Create(Rule, methodDeclaration.Identifier.GetLocation(), methodName);
+                context.ReportDiagnostic(diagnostic);
+            }
+        }
         private static void AnalyzeClassDeclaration(SyntaxNodeAnalysisContext context)
         {
             // Report a diagnostic on the class identifier in class declarations
@@ -79,7 +161,7 @@ namespace Sample.Analyzers
             var symbol = symbolInfo.Symbol;
 
             // Check if the symbol is a named type symbol (class, interface, etc.)
-            if (symbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.TypeKind == TypeKind.Class)
+            if (symbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.TypeKind == TypeKind.Class )
             {
                 // Check if the identifier text matches the symbol name
                 if (identifierNameSyntax.Identifier.Text == namedTypeSymbol.Name && UpperCamelCaseRegex.IsMatch(identifierNameSyntax.Identifier.Text)==false )
@@ -90,6 +172,9 @@ namespace Sample.Analyzers
                 }
             }
         }
+        
+        
+        
         private static void AnalyzeObjCreation(SyntaxNodeAnalysisContext context)
         {
             var creation = (ObjectCreationExpressionSyntax)context.Node;
