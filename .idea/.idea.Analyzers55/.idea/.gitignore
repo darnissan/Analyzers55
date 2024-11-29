@@ -63,5 +63,5 @@ _ReSharper.Caches/
 Thumbs.db
 
 # Uncomment the following lines if necessary
-# *.bak
-# *.old
+ *.bak
+ *.old

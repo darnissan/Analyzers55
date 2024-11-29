@@ -15,7 +15,7 @@ public class Ea5a{
     {
     }
     public class GoodE2xamp2le{}
-    
+    public void MetAhod1(){}
     public void ExamplMethod()
     {
         Console.WriteLine("badVar");
