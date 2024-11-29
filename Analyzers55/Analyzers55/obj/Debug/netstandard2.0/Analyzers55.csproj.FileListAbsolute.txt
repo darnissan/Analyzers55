@@ -1,0 +1,12 @@
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\bin\Debug\netstandard2.0\Analyzers55.deps.json
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\bin\Debug\netstandard2.0\Analyzers55.dll
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\bin\Debug\netstandard2.0\Analyzers55.pdb
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.csproj.AssemblyReference.cache
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.Resources.resources
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.csproj.GenerateResource.cache
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.AssemblyInfoInputs.cache
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.AssemblyInfo.cs
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.csproj.CoreCompileInputs.cache
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.dll
+C:\Users\t-darnissan\RiderProjects\Analyzers55\Analyzers55\Analyzers55\obj\Debug\netstandard2.0\Analyzers55.pdb

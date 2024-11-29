@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "Analyzers55.Sample/1.0.0": {
+        "runtime": {
+          "Analyzers55.Sample.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Analyzers55.Sample/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
