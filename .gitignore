@@ -1,1 +1,67 @@
-new_entry_here
+# Default ignored files
+/shelf/
+/workspace.xml
+# Rider ignored files
+/modules.xml
+/contentModel.xml
+/projectSettingsUpdater.xml
+/.idea.Analyzers55.iml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+
+# Ignore build outputs
+**/bin/
+**/obj/
+
+# Ignore user-specific files
+*.user
+*.suo
+
+# Ignore Rider-specific files
+.idea.*
+
+# Ignore logs and temporary files
+*.log
+*.tmp
+
+# Ignore debug output
+*.pdb
+
+# Ignore compiled DLLs and executables
+*.dll
+*.exe
+
+# Ignore NuGet packages
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Ignore generated files
+*.generated.cs
+*.cache
+*.g.props
+*.g.targets
+
+# Ignore Resharper files
+_ReSharper.Caches/
+
+# Ignore configuration files that may contain sensitive data
+**/launchSettings.json
+
+# Ignore other miscellaneous files
+.DS_Store
+Thumbs.db
+
+# Uncomment the following lines if necessary
+ *.bak
+ *.old
