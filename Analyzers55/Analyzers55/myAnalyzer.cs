@@ -18,9 +18,9 @@ namespace Sample.Analyzers
     /// For analyzers that requires analyzing symbols or syntax nodes across a code block, see <see cref="CodeBlockStartedAnalyzer"/>.
     /// </remarks>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class SyntaxNodeAnalyzer : DiagnosticAnalyzer
+    public class MyAnalyzer : DiagnosticAnalyzer
     {
-        private const string DiagnosticId = "ALERRRRRRRTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
+        public const string DiagnosticId = "ALERRRRRRRTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
         private const string Title = "Declare explicit type for local declarations.";
         private static readonly Regex UpperCamelCaseRegex = new Regex(@"^([A-Z][a-z]*[0-9]*)+$", RegexOptions.Compiled);
         private static readonly Regex lowerCamelCaseRegex = new Regex(@"^[a-z]+[0-9]*([A-Z][a-z]*[0-9]*)*$", RegexOptions.Compiled);
