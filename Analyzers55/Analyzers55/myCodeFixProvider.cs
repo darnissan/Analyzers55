@@ -1,20 +1,20 @@
-using System.Collections.Generic;
+
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Rename;
 using Sample.Analyzers;
-
-namespace Analyzers55;
-
 using System.Composition;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeFixes;
+
+
+namespace Analyzers55;
+
+
 
 [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(myCodeFixProvider)), Shared]
 public class myCodeFixProvider : CodeFixProvider
@@ -81,9 +81,7 @@ public class myCodeFixProvider : CodeFixProvider
         return false;
     }
     
-   private static readonly Regex WordSplitterRegex = new Regex(
-    @"[A-Z]?[a-z]+|\d+|[A-Z]+(?![a-z])",
-    RegexOptions.Compiled);
+  
 
 private string GenerateCorrectName(ISymbol symbol)
 {
@@ -92,16 +90,14 @@ private string GenerateCorrectName(ISymbol symbol)
     // Remove invalid characters (characters that are not letters, numbers, or underscores)
     var validChars = originalName.Where(c => isEnglishLetterOrDigit(c) || c == '_').ToArray();
     var cleanedName = new string(validChars);
-
-    // Split the name into words using regular expression
-    var words = SplitIntoWordsIncludingNumbers(cleanedName);
-    var wordsWithNoNumbers = SplitIntoWordsDroppingNumbers(cleanedName);
-
+    
     // Apply naming conventions based on symbol kind
     string newName;
     switch (symbol)
     {
         case IMethodSymbol _:
+            newName = SuitableClassMethodName(originalName);
+            break;
         case INamedTypeSymbol _:
             // UpperCamelCase
             newName = SuitableClassMethodName(originalName);
@@ -226,88 +222,6 @@ private string SuitableGlobalConstVarName(string originalName)
      cleanedName = Regex.Replace(cleanedName, "_+", "_");
      cleanedName = cleanedName.ToUpper();
      return cleanedName;
-}
-
-
-
-private IEnumerable<string> SplitIntoWordsIncludingNumbers(string name)
-{
-    var words = new List<string>();
-    var currentWord = new StringBuilder();
-
-    foreach (var c in name)
-    {
-        if (c == '_')
-        {
-            if (currentWord.Length > 0)
-            {
-                words.Add(currentWord.ToString());
-                currentWord.Clear();
-            }
-        }
-        else if (char.IsUpper(c))
-        {
-            if (currentWord.Length > 0)
-            {
-                words.Add(currentWord.ToString());
-                currentWord.Clear();
-            }
-            currentWord.Append(c);
-        }
-        else
-        {
-            // Include lowercase letters and digits
-            currentWord.Append(c);
-        }
     }
-
-    if (currentWord.Length > 0)
-    {
-        words.Add(currentWord.ToString());
-    }
-
-    return words;
-}
-
-private IEnumerable<string> SplitIntoWordsDroppingNumbers(string name)
-{
-    var words = new List<string>();
-    var currentWord = new StringBuilder();
-
-    foreach (var c in name)
-    {
-        if (c == '_')
-        {
-            if (currentWord.Length > 0)
-            {
-                words.Add(currentWord.ToString());
-                currentWord.Clear();
-            }
-        }
-        else if (char.IsUpper(c))
-        {
-            if (currentWord.Length > 0)
-            {
-                words.Add(currentWord.ToString());
-                currentWord.Clear();
-            }
-            currentWord.Append(c);
-        }
-        else if (char.IsLower(c))
-        {
-            // Include lowercase letters
-            currentWord.Append(c);
-        }
-        // Else ignore digits and other characters
-    }
-
-    if (currentWord.Length > 0)
-    {
-        words.Add(currentWord.ToString());
-    }
-
-    return words;
-}
-
 
 }

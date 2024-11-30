@@ -30,8 +30,6 @@ namespace Sample.Analyzers
 
         private const string Description = "Declare explicit type for local declarations.";
         
-        
-        
         internal static DiagnosticDescriptor Rule =
             new DiagnosticDescriptor(
                 DiagnosticId,
@@ -45,271 +43,114 @@ namespace Sample.Analyzers
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
+         public ImmutableArray<SymbolKind> SymbolKinds => ImmutableArray.Create(SymbolKind.NamedType,
+            SymbolKind.Property, SymbolKind.Method, SymbolKind.Local, SymbolKind.Field);
+
+         public ImmutableArray<SyntaxKind> SyntaxKinds =>
+             ImmutableArray.Create( SyntaxKind.LocalDeclarationStatement);
         public override void Initialize(AnalysisContext context)
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            //context.RegisterSyntaxNodeAction(AnalyzeSyntaxNode, SyntaxKind.VariableDeclaration);
-            //context.RegisterSyntaxNodeAction(AnalyzeSyntaxNodeMethodDeclaration, SyntaxKind.MethodDeclaration);
-            //context.RegisterSyntaxNodeAction(AnalyzeSyntaxNodeClassDeclaration, SyntaxKind.ClassDeclaration);
-            //context.RegisterSymbolAction(AnalyzeClassSymbol, SymbolKind.NamedType);
-            //context.RegisterSyntaxNodeAction(AnalyzeObjCreation,SyntaxKind.ObjectCreationExpression);
-            context.RegisterSyntaxNodeAction(AnalyzeClassDeclaration, SyntaxKind.ClassDeclaration);
-            context.RegisterSyntaxNodeAction(AnalyzeIdentifierName, SyntaxKind.IdentifierName);
-            context.RegisterSyntaxNodeAction(AnalyzeMethodDeclaration, SyntaxKind.MethodDeclaration);
-            context.RegisterSyntaxNodeAction(AnalyzeInvocationExpression, SyntaxKind.InvocationExpression);
-            context.RegisterSyntaxNodeAction(AnalyzeLocalDeclaration, SyntaxKind.LocalDeclarationStatement);
-            context.RegisterSyntaxNodeAction(AnalyzeGlobaclConstDeclaration,SyntaxKind.FieldDeclaration);
+            context.RegisterSymbolAction(AnalyzeSymbolKinds, SymbolKinds);
+            context.RegisterSyntaxNodeAction(AnalyzeSyntaxKinds, SyntaxKinds);
         }
 
-      
-        private static void AnalyzeGlobaclConstDeclaration(SyntaxNodeAnalysisContext context)
+        private static void AnalyzeSyntaxKinds(SyntaxNodeAnalysisContext context)
         {
-            var fieldDeclaration = (FieldDeclarationSyntax)context.Node;
-
-            // Check for 'const' modifier
-            if (!fieldDeclaration.Modifiers.Any(SyntaxKind.ConstKeyword))
+            if (context.Node is LocalDeclarationStatementSyntax localDeclaration)
+            {
+                if (localDeclaration.Declaration.Variables.Count == 0) return;
+                for (var index = 0; index < localDeclaration.Declaration.Variables.Count; index++)
+                {
+                    var variable = localDeclaration.Declaration.Variables[index];
+                    var variableText = variable.Identifier.ValueText;
+                    if (lowerCamelCaseRegex.IsMatch(variableText) == false)
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, variable.Identifier.GetLocation(), variableText));
+                    }
+                }
+            }
+        }
+        private static void AnalyzeIdentifierName(SyntaxNodeAnalysisContext context)
+        {
+            // Check if the node is an IdentifierNameSyntax
+            if (!(context.Node is IdentifierNameSyntax identifierName))
                 return;
 
-            foreach (var variable in fieldDeclaration.Declaration.Variables)
+            // Get the semantic model to analyze the symbol
+            var semanticModel = context.SemanticModel;
+            
+            // Get the symbol for the identifier
+            var symbol = semanticModel.GetSymbolInfo(identifierName).Symbol;
+            
+            // If no symbol found, return
+            if (symbol == null)
+                return;
+            
+            // Check if the symbol represents a type
+            if (symbol is INamedTypeSymbol typeSymbol)
             {
-                var name = variable.Identifier.Text;
-
-                if (!SNAKE_CASE_REGEX.IsMatch(name))
+                // Verify if it's a class type
+                if (typeSymbol.TypeKind == TypeKind.Class)
                 {
-                    var diagnostic = Diagnostic.Create(Rule, variable.Identifier.GetLocation(), name);
-                    context.ReportDiagnostic(diagnostic);
-                }
-            }
-        }
-        private static void AnalyzeLocalDeclaration(SyntaxNodeAnalysisContext context)
-        {
-            var localDeclaration = (LocalDeclarationStatementSyntax)context.Node;
-            foreach (var variable in localDeclaration.Declaration.Variables)
-            {
-                // issue rule upon every local variable that its identifier doesnt follow low camel case
-                if (!lowerCamelCaseRegex.IsMatch(variable.Identifier.ValueText))
-                {
-                    context.ReportDiagnostic(Diagnostic.Create(Rule, variable.Identifier.GetLocation(), variable.Identifier.ValueText));
-                }
-            }
-        }
-        private static void AnalyzeInvocationExpression(SyntaxNodeAnalysisContext context)
-        {
-            var invocationExpr = (InvocationExpressionSyntax)context.Node;
-            var expression = invocationExpr.Expression;
-
-            ISymbol symbol = null;
-
-            if (expression is IdentifierNameSyntax identifierNameSyntax)
-            {
-                symbol = context.SemanticModel.GetSymbolInfo(identifierNameSyntax).Symbol;
-                if (symbol is IMethodSymbol methodSymbol &&
-                    identifierNameSyntax.Identifier.Text == methodSymbol.Name && UpperCamelCaseRegex.IsMatch(identifierNameSyntax.Identifier.Text)==false)
-                {
-                    var methodName = identifierNameSyntax.Identifier.Text;
-                    var diagnostic = Diagnostic.Create(Rule, identifierNameSyntax.Identifier.GetLocation(), methodName);
-                    context.ReportDiagnostic(diagnostic);
-                }
-            }
-            else if (expression is MemberAccessExpressionSyntax memberAccessExpr)
-            {
-                var nameSyntax = memberAccessExpr.Name;
-                if (nameSyntax is IdentifierNameSyntax nameIdentifier)
-                {
-                    symbol = context.SemanticModel.GetSymbolInfo(nameIdentifier).Symbol;
-                    if (symbol is IMethodSymbol methodSymbol &&
-                        nameIdentifier.Identifier.Text == methodSymbol.Name 
-                        && UpperCamelCaseRegex.IsMatch(nameIdentifier.Identifier.Text)==false)
+                    // Check naming convention
+                    if (!UpperCamelCaseRegex.IsMatch(symbol.Name))
                     {
-                        var methodName = nameIdentifier.Identifier.Text;
-                        var diagnostic = Diagnostic.Create(Rule, nameIdentifier.Identifier.GetLocation(), methodName);
+                        var diagnostic = Diagnostic.Create(
+                            Rule, 
+                            symbol.Locations[0], 
+                            symbol.Name
+                        );
                         context.ReportDiagnostic(diagnostic);
                     }
                 }
             }
         }
-    
-        private static void AnalyzeMethodDeclaration(SyntaxNodeAnalysisContext context)
+        
+        private static void AnalyzeSymbolKinds(SymbolAnalysisContext context)
         {
-            var methodDeclaration = (MethodDeclarationSyntax)context.Node;
-            var methodName = methodDeclaration.Identifier.Text;
-            if (UpperCamelCaseRegex.IsMatch(methodName) == false)
+            var symbolKind = context.Symbol.Kind;
+            if (symbolKind == SymbolKind.NamedType && context.Symbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.TypeKind == TypeKind.Class)
             {
-                var diagnostic = Diagnostic.Create(Rule, methodDeclaration.Identifier.GetLocation(), methodName);
-                context.ReportDiagnostic(diagnostic);
-            }
-        }
-        private static void AnalyzeClassDeclaration(SyntaxNodeAnalysisContext context)
-        {
-            // Report a diagnostic on the class identifier in class declarations
-            var classDeclaration = (ClassDeclarationSyntax)context.Node;
-            var className = classDeclaration.Identifier.Text;
-            if (!UpperCamelCaseRegex.IsMatch(className))
-            {
-                var diagnostic = Diagnostic.Create(Rule, classDeclaration.Identifier.GetLocation(), className);
-                context.ReportDiagnostic(diagnostic);
-            }
-        }
-    
-        private static void AnalyzeIdentifierName(SyntaxNodeAnalysisContext context)
-        {
-            var identifierNameSyntax = (IdentifierNameSyntax)context.Node;
-
-            // Use the semantic model to get symbol information
-            var symbolInfo = context.SemanticModel.GetSymbolInfo(identifierNameSyntax);
-            var symbol = symbolInfo.Symbol;
-
-            // Check if the symbol is a named type symbol (class, interface, etc.)
-            if (symbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.TypeKind == TypeKind.Class )
-            {
-                // Check if the identifier text matches the symbol name
-                if (identifierNameSyntax.Identifier.Text == namedTypeSymbol.Name && UpperCamelCaseRegex.IsMatch(identifierNameSyntax.Identifier.Text)==false )
+                if (!UpperCamelCaseRegex.IsMatch(context.Symbol.Name))
                 {
-                    var className = identifierNameSyntax.Identifier.Text;
-                    var diagnostic = Diagnostic.Create(Rule, identifierNameSyntax.Identifier.GetLocation(), className);
+                    var diagnostic = Diagnostic.Create(Rule, context.Symbol.Locations[0], context.Symbol.Name);
                     context.ReportDiagnostic(diagnostic);
                 }
             }
-        }
-        
-        
-        
-        private static void AnalyzeObjCreation(SyntaxNodeAnalysisContext context)
-        {
-            var creation = (ObjectCreationExpressionSyntax)context.Node;
-            var identifierName = creation.ToString();
-        }
-        private static void AnalyzeClassSymbol(SymbolAnalysisContext context)
-        {
-            ISymbol symbol = context.Symbol;
 
-            if (symbol.Kind is (SymbolKind.Method or SymbolKind.NamedType))
+            if (symbolKind == SymbolKind.Method && context.Symbol is IMethodSymbol methodSymbol)
             {
-                // bool isComforting = UpperCamelCaseRegex.IsMatch(symbol.Name);
-                // if (isComforting)
-                //     return;
-
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        Rule,
-                        symbol.Locations[0],
-                        symbol.Name));
-                return;
-            }
-         
-        }
-
-        private static bool  IsValidChars(string text)
-        {
-            foreach (var character in text)
-            {
-                if (!((character>='A' && character<='Z') || 
-                      (character>='a' && character<='z') ||
-                      (character>='0' && character<='9')))
-                    return false;
-            }
-            return true;
-        }
-        private static void AnalyzeSyntaxNodeClassDeclaration(SyntaxNodeAnalysisContext context)
-        {
-            var declaration = (ClassDeclarationSyntax)context.Node;
-            var declarationText = declaration.Identifier.Text;
-            if (!IsValidChars(declarationText))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(Rule, declaration.Identifier.GetLocation(), declarationText));
+                if (!UpperCamelCaseRegex.IsMatch(methodSymbol.Name))
+                {
+                    var diagnostic = Diagnostic.Create(Rule, context.Symbol.Locations[0], context.Symbol.Name);
+                    context.ReportDiagnostic(diagnostic);
+                }
             }
             
-         
-            if (!Regex.IsMatch(declarationText, UpperCamelCaseRegex.ToString()))
+            if ((symbolKind == SymbolKind.Field && context.Symbol is IFieldSymbol fieldSymbol) )
             {
-                context.ReportDiagnostic(Diagnostic.Create(Rule, declaration.Identifier.GetLocation(), declarationText));
-            }
-        }
-        
-        
-        
-        
-        
-        private void SymbolAction(SymbolAnalysisContext context)
-        {
-            ISymbol symbol = context.Symbol;
-
-            if (symbol.Kind is (SymbolKind.Method or SymbolKind.NamedType))
-            {
-                bool isComforting = UpperCamelCaseRegex.IsMatch(symbol.Name);
-                if (isComforting)
-                    return;
-
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        Rule,
-                        symbol.Locations[0],
-                        symbol.Name));
-                return;
-            }
-
-            if (symbol.Kind is (SymbolKind.Parameter or SymbolKind.Property))
-            {
-                bool isComforting = lowerCamelCaseRegex.IsMatch(symbol.Name);
-                if (isComforting)
-                    return;
-
-                context.ReportDiagnostic(
-                    Diagnostic.Create(
-                        Rule,
-                        symbol.Locations[0],
-                        symbol.Name));
-                return;
-            }
-
-          
-
-            
-        }
-    
-        private static void AnalyzeSyntaxNodeMethodDeclaration(SyntaxNodeAnalysisContext context) 
-        {
-                var declaration = (MethodDeclarationSyntax)context.Node;
-                var declarationText = declaration.Identifier.ValueText;
-                if (!IsValidChars(declarationText))
+                if (fieldSymbol.IsConst && fieldSymbol.DeclaredAccessibility == Accessibility.Public)
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(Rule, declaration.Identifier.GetLocation(), declarationText));
-                }
-
-                if (!Regex.IsMatch(declarationText, UpperCamelCaseRegex.ToString()))
-                {
-                    context.ReportDiagnostic(Diagnostic.Create(Rule, declaration.Identifier.GetLocation(), declarationText));
-                }
-
-             
-        }
-        
-
-        private static void AnalyzeSyntaxNode(SyntaxNodeAnalysisContext context)
-        {
-            // Find implicitly typed variable declarations.
-            VariableDeclarationSyntax declaration = (VariableDeclarationSyntax)context.Node;
-
-            foreach (VariableDeclaratorSyntax variable in declaration.Variables)
-            {
-                foreach (char character in variable.Identifier.ValueText)
-                {
-
-                    if (!((character>='A' && character<='Z') || 
-                        (character>='a' && character<='z') ||
-                        (character>='0' && character<='9')))
+                    if (!SNAKE_CASE_REGEX.IsMatch(fieldSymbol.Name))
                     {
-                        // For all such locals, report a diagnostic.
-                        context.ReportDiagnostic(
-                            Diagnostic.Create(
-                                Rule,
-                                variable.GetLocation(),
-                                variable.Identifier.ValueText));
+                        var diagnostic = Diagnostic.Create(Rule, context.Symbol.Locations[0], context.Symbol.Name);
+                        context.ReportDiagnostic(diagnostic);
                     }
-
                 }
+          
             }
-        }
+        
+            }
+            
     }
-}
+        
+        
+        
+
+
+
+
+
+    }
