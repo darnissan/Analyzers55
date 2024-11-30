@@ -68,6 +68,18 @@ public class myCodeFixProvider : CodeFixProvider
 
         return newSolution;
     }
+    public bool isEnglishLetter(char letter)
+    {
+        if( Regex.IsMatch(letter.ToString(), "^[a-zA-Z]$") )
+            return true;
+        return false;
+    }
+    public bool isEnglishLetterOrDigit(char letter)
+    {
+        if( Regex.IsMatch(letter.ToString(), "^[a-zA-Z0-9]$") )
+            return true;
+        return false;
+    }
     
    private static readonly Regex WordSplitterRegex = new Regex(
     @"[A-Z]?[a-z]+|\d+|[A-Z]+(?![a-z])",
@@ -78,7 +90,7 @@ private string GenerateCorrectName(ISymbol symbol)
     var originalName = symbol.Name;
 
     // Remove invalid characters (characters that are not letters, numbers, or underscores)
-    var validChars = originalName.Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray();
+    var validChars = originalName.Where(c => isEnglishLetterOrDigit(c) || c == '_').ToArray();
     var cleanedName = new string(validChars);
 
     // Split the name into words using regular expression
@@ -120,14 +132,14 @@ private string SuitableClassMethodName(string originalName)
     }
     
     // First, drop all invalid characters
-    var validChars = originalName.Where(c => char.IsLetterOrDigit(c)).ToArray();
+    var validChars = originalName.Where(c => isEnglishLetterOrDigit(c)).ToArray();
     var cleanedName = new string(validChars);
     
     // Capitalize the first letter and every letter after a digit
     char[] chars = new char[cleanedName.Length];
 
     // Capitalize the first character if it's a letter
-    chars[0] = char.IsLetter(cleanedName[0]) ? char.ToUpper(cleanedName[0]) : cleanedName[0];
+    chars[0] = isEnglishLetter(cleanedName[0]) ? char.ToUpper(cleanedName[0]) : cleanedName[0];
 
     // Process the rest of the characters
     for (int i = 1; i < cleanedName.Length; i++)
@@ -135,7 +147,7 @@ private string SuitableClassMethodName(string originalName)
         char currentChar = cleanedName[i];
         char previousChar = cleanedName[i - 1];
 
-        if (char.IsLetter(currentChar) && char.IsDigit(previousChar))
+        if (isEnglishLetter(currentChar) && char.IsDigit(previousChar))
         {
             // Capitalize if the previous character is a digit
             chars[i] = char.ToUpper(currentChar);
@@ -163,14 +175,14 @@ private string SuitableLocalVarName(string originalName)
     }
     
     // First, drop all invalid characters
-    var validChars = originalName.Where(c => char.IsLetterOrDigit(c)).ToArray();
+    var validChars = originalName.Where(c => isEnglishLetterOrDigit(c)).ToArray();
     var cleanedName = new string(validChars);
     
     // Capitalize the first letter and every letter after a digit
     char[] chars = new char[cleanedName.Length];
 
     // Capitalize the first character if it's a letter
-    chars[0] = char.IsLetter(cleanedName[0]) ? char.ToLower(cleanedName[0]) : cleanedName[0];
+    chars[0] = isEnglishLetter(cleanedName[0]) ? char.ToLower(cleanedName[0]) : cleanedName[0];
 
     // Process the rest of the characters
     for (int i = 1; i < cleanedName.Length; i++)
@@ -178,7 +190,7 @@ private string SuitableLocalVarName(string originalName)
         char currentChar = cleanedName[i];
         char previousChar = cleanedName[i - 1];
 
-        if (char.IsLetter(currentChar) && char.IsDigit(previousChar))
+        if (isEnglishLetter(currentChar) && char.IsDigit(previousChar))
         {
             // Capitalize if the previous character is a digit
             chars[i] = char.ToUpper(currentChar);
@@ -209,6 +221,8 @@ private string SuitableGlobalConstVarName(string originalName)
     var validChars = originalName.Where(c => char.IsLetter(c) || c== '_').ToArray();
     
     var cleanedName = new string(validChars);
+    cleanedName=cleanedName.TrimStart('_');
+    cleanedName=cleanedName.TrimEnd('_');
      cleanedName = Regex.Replace(cleanedName, "_+", "_");
      cleanedName = cleanedName.ToUpper();
      return cleanedName;
@@ -296,22 +310,4 @@ private IEnumerable<string> SplitIntoWordsDroppingNumbers(string name)
 }
 
 
-
-
-private string UppercaseFirstLetter(string word)
-{
-    if (string.IsNullOrEmpty(word)) return word;
-    return char.ToUpperInvariant(word[0]) + word.Substring(1).ToLowerInvariant();
-}
-
-private string LowercaseFirstLetter(string word)
-{
-    if (string.IsNullOrEmpty(word)) return word;
-    return char.ToLowerInvariant(word[0]) + word.Substring(1);
-}
-
-// Provided regular expressions for validation
-private static readonly Regex UpperCamelCaseRegex = new Regex(@"^([A-Z][a-z]*\d*)+$", RegexOptions.Compiled);
-private static readonly Regex lowerCamelCaseRegex = new Regex(@"^[a-z]+[A-Za-z0-9]*$", RegexOptions.Compiled);
-private static readonly Regex SNAKE_CASE_REGEX = new Regex(@"^[A-Z]+(_[A-Z]+)*$", RegexOptions.Compiled);
 }
