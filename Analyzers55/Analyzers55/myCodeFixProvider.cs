@@ -69,117 +69,249 @@ public class myCodeFixProvider : CodeFixProvider
         return newSolution;
     }
     
+   private static readonly Regex WordSplitterRegex = new Regex(
+    @"[A-Z]?[a-z]+|\d+|[A-Z]+(?![a-z])",
+    RegexOptions.Compiled);
+
+private string GenerateCorrectName(ISymbol symbol)
+{
+    var originalName = symbol.Name;
+
+    // Remove invalid characters (characters that are not letters, numbers, or underscores)
+    var validChars = originalName.Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray();
+    var cleanedName = new string(validChars);
+
+    // Split the name into words using regular expression
+    var words = SplitIntoWordsIncludingNumbers(cleanedName);
+    var wordsWithNoNumbers = SplitIntoWordsDroppingNumbers(cleanedName);
+
+    // Apply naming conventions based on symbol kind
+    string newName;
+    switch (symbol)
+    {
+        case IMethodSymbol _:
+        case INamedTypeSymbol _:
+            // UpperCamelCase
+            newName = SuitableClassMethodName(originalName);
+            break;
+        case ILocalSymbol _:
+            // lowerCamelCase
+            newName = SuitableLocalVarName(originalName);
+            break;
+        case IFieldSymbol fieldSymbol when fieldSymbol.IsConst:
+            // SNAKE_CASE
+            newName = SuitableGlobalConstVarName(originalName);
+            break;
+        default:
+            newName = cleanedName; // Fallback to cleaned name if symbol kind is unhandled
+            break;
+    }
+
+
+
+    return newName;
+}
+
+private string SuitableClassMethodName(string originalName)
+{
+    if (string.IsNullOrEmpty(originalName))
+    {
+        return "FixMe"; // Or you can throw an exception if preferred
+    }
     
-    private string GenerateCorrectName(ISymbol symbol)
+    // First, drop all invalid characters
+    var validChars = originalName.Where(c => char.IsLetterOrDigit(c)).ToArray();
+    var cleanedName = new string(validChars);
+    
+    // Capitalize the first letter and every letter after a digit
+    char[] chars = new char[cleanedName.Length];
+
+    // Capitalize the first character if it's a letter
+    chars[0] = char.IsLetter(cleanedName[0]) ? char.ToUpper(cleanedName[0]) : cleanedName[0];
+
+    // Process the rest of the characters
+    for (int i = 1; i < cleanedName.Length; i++)
     {
-        var originalName = symbol.Name;
+        char currentChar = cleanedName[i];
+        char previousChar = cleanedName[i - 1];
 
-        // Remove invalid characters (characters that are not letters, numbers, or underscores)
-        var validChars = originalName.Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray();
-        var cleanedName = new string(validChars);
-
-        // Split the name into words based on casing and underscores
-        var words = SplitIntoWords(cleanedName);
-
-        // Apply naming conventions based on symbol kind
-        switch (symbol)
+        if (char.IsLetter(currentChar) && char.IsDigit(previousChar))
         {
-            case IMethodSymbol _:
-            case INamedTypeSymbol _:
-                // UpperCamelCase
-                return string.Concat(words.Select(UppercaseFirstLetter));
-            case ILocalSymbol _:
-                // lowerCamelCase
-                return LowercaseFirstLetter(string.Concat(words.Select(UppercaseFirstLetter)));
-            case IFieldSymbol fieldSymbol when fieldSymbol.IsConst:
-                // SNAKE_CASE
-                return string.Join("_", words).ToUpperInvariant();
-            default:
-                return cleanedName; // Fallback to cleaned name if symbol kind is unhandled
+            // Capitalize if the previous character is a digit
+            chars[i] = char.ToUpper(currentChar);
+        }
+        else
+        {
+            // Keep the character as is
+            chars[i] = currentChar;
         }
     }
-    private IEnumerable<string> SplitIntoWords(string name)
+
+    // Create the transformed string
+    string transformedName = new string(chars);
+
+    // Return the transformed name
+    return transformedName;
+}
+
+
+private string SuitableLocalVarName(string originalName)
+{
+    if (string.IsNullOrEmpty(originalName))
     {
-        var words = new List<string>();
-        var sb = new StringBuilder();
+        return "fixMe"; // Or you can throw an exception if preferred
+    }
+    
+    // First, drop all invalid characters
+    var validChars = originalName.Where(c => char.IsLetterOrDigit(c)).ToArray();
+    var cleanedName = new string(validChars);
+    
+    // Capitalize the first letter and every letter after a digit
+    char[] chars = new char[cleanedName.Length];
 
-        for (int i = 0; i < name.Length; i++)
+    // Capitalize the first character if it's a letter
+    chars[0] = char.IsLetter(cleanedName[0]) ? char.ToLower(cleanedName[0]) : cleanedName[0];
+
+    // Process the rest of the characters
+    for (int i = 1; i < cleanedName.Length; i++)
+    {
+        char currentChar = cleanedName[i];
+        char previousChar = cleanedName[i - 1];
+
+        if (char.IsLetter(currentChar) && char.IsDigit(previousChar))
         {
-            var currentChar = name[i];
-            var nextChar = i + 1 < name.Length ? name[i + 1] : '\0';
+            // Capitalize if the previous character is a digit
+            chars[i] = char.ToUpper(currentChar);
+        }
+        else
+        {
+            // Keep the character as is
+            chars[i] = currentChar;
+        }
+    }
 
-            sb.Append(currentChar);
+    // Create the transformed string
+    string transformedName = new string(chars);
 
-            bool isEndOfWord = false;
+    // Return the transformed name
+    return transformedName;
+}
 
-            if (char.IsUpper(currentChar))
-            {
-                if (char.IsLower(nextChar))
-                {
-                    // Transition from uppercase to lowercase (e.g., 'T' in 'Test')
-                    isEndOfWord = false;
-                }
-                else if (char.IsUpper(nextChar))
-                {
-                    // Consecutive uppercase letters (part of an acronym)
-                    isEndOfWord = false;
-                }
-                else
-                {
-                    isEndOfWord = true;
-                }
-            }
-            else if (char.IsLower(currentChar))
-            {
-                if (char.IsUpper(nextChar))
-                {
-                    // Transition from lowercase to uppercase
-                    isEndOfWord = true;
-                }
-                else
-                {
-                    isEndOfWord = false;
-                }
-            }
-            else if (currentChar == '_')
-            {
-                isEndOfWord = true;
-            }
-            else if (char.IsDigit(currentChar))
-            {
-                if (!char.IsDigit(nextChar))
-                {
-                    isEndOfWord = true;
-                }
-            }
 
-            if (isEndOfWord)
+private string SuitableGlobalConstVarName(string originalName)
+{
+    if (string.IsNullOrEmpty(originalName))
+    {
+        return "FIX_ME"; // Or you can throw an exception if preferred
+    }
+    
+    // First, drop all invalid characters
+    var validChars = originalName.Where(c => char.IsLetter(c) || c== '_').ToArray();
+    
+    var cleanedName = new string(validChars);
+     cleanedName = Regex.Replace(cleanedName, "_+", "_");
+     cleanedName = cleanedName.ToUpper();
+     return cleanedName;
+}
+
+
+
+private IEnumerable<string> SplitIntoWordsIncludingNumbers(string name)
+{
+    var words = new List<string>();
+    var currentWord = new StringBuilder();
+
+    foreach (var c in name)
+    {
+        if (c == '_')
+        {
+            if (currentWord.Length > 0)
             {
-                if (sb.Length > 0)
-                {
-                    words.Add(sb.ToString().Trim('_'));
-                    sb.Clear();
-                }
+                words.Add(currentWord.ToString());
+                currentWord.Clear();
             }
         }
-
-        if (sb.Length > 0)
+        else if (char.IsUpper(c))
         {
-            words.Add(sb.ToString().Trim('_'));
+            if (currentWord.Length > 0)
+            {
+                words.Add(currentWord.ToString());
+                currentWord.Clear();
+            }
+            currentWord.Append(c);
         }
-
-        return words.Where(w => !string.IsNullOrEmpty(w));
+        else
+        {
+            // Include lowercase letters and digits
+            currentWord.Append(c);
+        }
     }
 
-    private string UppercaseFirstLetter(string word)
+    if (currentWord.Length > 0)
     {
-        if (string.IsNullOrEmpty(word)) return word;
-        return char.ToUpperInvariant(word[0]) + word.Substring(1).ToLowerInvariant();
+        words.Add(currentWord.ToString());
     }
 
-    private string LowercaseFirstLetter(string word)
+    return words;
+}
+
+private IEnumerable<string> SplitIntoWordsDroppingNumbers(string name)
+{
+    var words = new List<string>();
+    var currentWord = new StringBuilder();
+
+    foreach (var c in name)
     {
-        if (string.IsNullOrEmpty(word)) return word;
-        return char.ToLowerInvariant(word[0]) + word.Substring(1);
+        if (c == '_')
+        {
+            if (currentWord.Length > 0)
+            {
+                words.Add(currentWord.ToString());
+                currentWord.Clear();
+            }
+        }
+        else if (char.IsUpper(c))
+        {
+            if (currentWord.Length > 0)
+            {
+                words.Add(currentWord.ToString());
+                currentWord.Clear();
+            }
+            currentWord.Append(c);
+        }
+        else if (char.IsLower(c))
+        {
+            // Include lowercase letters
+            currentWord.Append(c);
+        }
+        // Else ignore digits and other characters
     }
+
+    if (currentWord.Length > 0)
+    {
+        words.Add(currentWord.ToString());
+    }
+
+    return words;
+}
+
+
+
+
+private string UppercaseFirstLetter(string word)
+{
+    if (string.IsNullOrEmpty(word)) return word;
+    return char.ToUpperInvariant(word[0]) + word.Substring(1).ToLowerInvariant();
+}
+
+private string LowercaseFirstLetter(string word)
+{
+    if (string.IsNullOrEmpty(word)) return word;
+    return char.ToLowerInvariant(word[0]) + word.Substring(1);
+}
+
+// Provided regular expressions for validation
+private static readonly Regex UpperCamelCaseRegex = new Regex(@"^([A-Z][a-z]*\d*)+$", RegexOptions.Compiled);
+private static readonly Regex lowerCamelCaseRegex = new Regex(@"^[a-z]+[A-Za-z0-9]*$", RegexOptions.Compiled);
+private static readonly Regex SNAKE_CASE_REGEX = new Regex(@"^[A-Z]+(_[A-Z]+)*$", RegexOptions.Compiled);
 }
