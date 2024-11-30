@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace Sample.Analyzers
+namespace Analyzers55
 {
     /// <summary>
     /// Analyzer for reporting syntax node diagnostics.
@@ -20,16 +20,17 @@ namespace Sample.Analyzers
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class MyAnalyzer : DiagnosticAnalyzer
     {
-        public const string DiagnosticId = "ALERRRRRRRTTTTTTTTTTTTTTTTTTTTTTTTTTTT";
-        private const string Title = "Declare explicit type for local declarations.";
+        public const string DiagnosticId = "CS236651";
+        private static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.CS236651Title),
+            Resources.ResourceManager, typeof(Resources));
         private static readonly Regex UpperCamelCaseRegex = new Regex(@"^([A-Z][a-z]*[0-9]*)+$", RegexOptions.Compiled);
         private static readonly Regex lowerCamelCaseRegex = new Regex(@"^[a-z]+[0-9]*([A-Z][a-z]*[0-9]*)*$", RegexOptions.Compiled);
         private static readonly Regex SNAKE_CASE_REGEX = new Regex(@"^[A-Z]+([_][A-Z]+)*$", RegexOptions.Compiled);
-        public const string MessageFormat =
-            "Local '{0}' is implicitly typed. Consider specifying its type explicitly in the declaration.";
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.CS236651MessageFormat),
+            Resources.ResourceManager, typeof(Resources));
 
-        private const string Description = "Declare explicit type for local declarations.";
-        
+        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.CS236651Description),
+            Resources.ResourceManager, typeof(Resources));
         internal static DiagnosticDescriptor Rule =
             new DiagnosticDescriptor(
                 DiagnosticId,
@@ -68,41 +69,6 @@ namespace Sample.Analyzers
                     if (lowerCamelCaseRegex.IsMatch(variableText) == false)
                     {
                         context.ReportDiagnostic(Diagnostic.Create(Rule, variable.Identifier.GetLocation(), variableText));
-                    }
-                }
-            }
-        }
-        private static void AnalyzeIdentifierName(SyntaxNodeAnalysisContext context)
-        {
-            // Check if the node is an IdentifierNameSyntax
-            if (!(context.Node is IdentifierNameSyntax identifierName))
-                return;
-
-            // Get the semantic model to analyze the symbol
-            var semanticModel = context.SemanticModel;
-            
-            // Get the symbol for the identifier
-            var symbol = semanticModel.GetSymbolInfo(identifierName).Symbol;
-            
-            // If no symbol found, return
-            if (symbol == null)
-                return;
-            
-            // Check if the symbol represents a type
-            if (symbol is INamedTypeSymbol typeSymbol)
-            {
-                // Verify if it's a class type
-                if (typeSymbol.TypeKind == TypeKind.Class)
-                {
-                    // Check naming convention
-                    if (!UpperCamelCaseRegex.IsMatch(symbol.Name))
-                    {
-                        var diagnostic = Diagnostic.Create(
-                            Rule, 
-                            symbol.Locations[0], 
-                            symbol.Name
-                        );
-                        context.ReportDiagnostic(diagnostic);
                     }
                 }
             }

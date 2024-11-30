@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.Rename;
-using Sample.Analyzers;
 using System.Composition;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeFixes;
@@ -15,17 +14,16 @@ using Microsoft.CodeAnalysis.CodeFixes;
 namespace Analyzers55;
 
 
-
-[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(myCodeFixProvider)), Shared]
-public class myCodeFixProvider : CodeFixProvider
+[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(MyCodeFixProvider)), Shared]
+public class MyCodeFixProvider : CodeFixProvider
 {
-    public override ImmutableArray<string> FixableDiagnosticIds { get; } = 
+    public override ImmutableArray<string> FixableDiagnosticIds { get; } =
         ImmutableArray.Create(MyAnalyzer.DiagnosticId);
     public override FixAllProvider? GetFixAllProvider() => null;
     
     public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
     {
-        var diagnostic = context.Diagnostics.First();
+        var diagnostic = context.Diagnostics.Single();
         var diagnosticSpan = diagnostic.Location.SourceSpan;
 
         // Find the syntax node representing the identifier that needs fixing
