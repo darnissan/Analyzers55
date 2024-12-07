@@ -21,16 +21,25 @@ namespace Analyzers55
     public class MyAnalyzer : DiagnosticAnalyzer
     {
         public const string DiagnosticId = "CS236651";
+
         private static readonly LocalizableString Title = new LocalizableResourceString(nameof(Resources.CS236651Title),
             Resources.ResourceManager, typeof(Resources));
+
         private static readonly Regex UpperCamelCaseRegex = new Regex(@"^([A-Z][a-z]*[0-9]*)+$", RegexOptions.Compiled);
-        private static readonly Regex lowerCamelCaseRegex = new Regex(@"^[a-z]+[0-9]*([A-Z][a-z]*[0-9]*)*$", RegexOptions.Compiled);
+
+        private static readonly Regex lowerCamelCaseRegex =
+            new Regex(@"^[a-z]+[0-9]*([A-Z][a-z]*[0-9]*)*$", RegexOptions.Compiled);
+
         private static readonly Regex SNAKE_CASE_REGEX = new Regex(@"^[A-Z]+([_][A-Z]+)*$", RegexOptions.Compiled);
-        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(nameof(Resources.CS236651MessageFormat),
+
+        private static readonly LocalizableString MessageFormat = new LocalizableResourceString(
+            nameof(Resources.CS236651MessageFormat),
             Resources.ResourceManager, typeof(Resources));
 
-        private static readonly LocalizableString Description = new LocalizableResourceString(nameof(Resources.CS236651Description),
+        private static readonly LocalizableString Description = new LocalizableResourceString(
+            nameof(Resources.CS236651Description),
             Resources.ResourceManager, typeof(Resources));
+
         internal static DiagnosticDescriptor Rule =
             new DiagnosticDescriptor(
                 DiagnosticId,
@@ -40,19 +49,21 @@ namespace Analyzers55
                 DiagnosticSeverity.Warning,
                 isEnabledByDefault: true,
                 description: Description);
-        
+
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
 
-         public ImmutableArray<SymbolKind> SymbolKinds => ImmutableArray.Create(SymbolKind.NamedType,
-            SymbolKind.Property, SymbolKind.Method, SymbolKind.Local, SymbolKind.Field);
+        public ImmutableArray<SymbolKind> SymbolKinds => ImmutableArray.Create(SymbolKind.NamedType,
+            SymbolKind.Property, SymbolKind.Method, SymbolKind.Field);
 
-         public ImmutableArray<SyntaxKind> SyntaxKinds =>
-             ImmutableArray.Create( SyntaxKind.LocalDeclarationStatement);
+        public ImmutableArray<SyntaxKind> SyntaxKinds =>
+            ImmutableArray.Create(SyntaxKind.LocalDeclarationStatement);
+
         public override void Initialize(AnalysisContext context)
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
+
             context.RegisterSymbolAction(AnalyzeSymbolKinds, SymbolKinds);
             context.RegisterSyntaxNodeAction(AnalyzeSyntaxKinds, SyntaxKinds);
         }
@@ -68,16 +79,18 @@ namespace Analyzers55
                     var variableText = variable.Identifier.ValueText;
                     if (lowerCamelCaseRegex.IsMatch(variableText) == false)
                     {
-                        context.ReportDiagnostic(Diagnostic.Create(Rule, variable.Identifier.GetLocation(), variableText));
+                        context.ReportDiagnostic(Diagnostic.Create(Rule, variable.Identifier.GetLocation(),
+                            variableText));
                     }
                 }
             }
         }
-        
+
         private static void AnalyzeSymbolKinds(SymbolAnalysisContext context)
         {
             var symbolKind = context.Symbol.Kind;
-            if (symbolKind == SymbolKind.NamedType && context.Symbol is INamedTypeSymbol namedTypeSymbol && namedTypeSymbol.TypeKind == TypeKind.Class)
+            if (symbolKind == SymbolKind.NamedType && context.Symbol is INamedTypeSymbol namedTypeSymbol &&
+                namedTypeSymbol.TypeKind == TypeKind.Class)
             {
                 if (!UpperCamelCaseRegex.IsMatch(context.Symbol.Name))
                 {
@@ -94,8 +107,8 @@ namespace Analyzers55
                     context.ReportDiagnostic(diagnostic);
                 }
             }
-            
-            if ((symbolKind == SymbolKind.Field && context.Symbol is IFieldSymbol fieldSymbol) )
+
+            if ((symbolKind == SymbolKind.Field && context.Symbol is IFieldSymbol fieldSymbol))
             {
                 if (fieldSymbol.IsConst && fieldSymbol.DeclaredAccessibility == Accessibility.Public)
                 {
@@ -105,12 +118,11 @@ namespace Analyzers55
                         context.ReportDiagnostic(diagnostic);
                     }
                 }
-          
+
             }
-        
-            }
-            
+        }
     }
+}
         
         
         
@@ -119,4 +131,4 @@ namespace Analyzers55
 
 
 
-    }
+
