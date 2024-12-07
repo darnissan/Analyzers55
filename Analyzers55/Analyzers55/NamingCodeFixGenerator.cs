@@ -14,11 +14,11 @@ using Microsoft.CodeAnalysis.CodeFixes;
 namespace Analyzers55;
 
 
-[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(MyCodeFixProvider)), Shared]
-public class MyCodeFixProvider : CodeFixProvider
+[ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(NamingCodeFixGenerator)), Shared]
+public class NamingCodeFixGenerator : CodeFixProvider
 {
     public override ImmutableArray<string> FixableDiagnosticIds { get; } =
-        ImmutableArray.Create(MyAnalyzer.DiagnosticId);
+        ImmutableArray.Create(NamingSyntacticAnalyzer.DiagnosticId);
     public override FixAllProvider? GetFixAllProvider() => null;
     
     public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
@@ -80,49 +80,46 @@ public class MyCodeFixProvider : CodeFixProvider
     }
     
   
-
-private string GenerateCorrectName(ISymbol symbol)
-{
-    var originalName = symbol.Name;
-
-
-    var validChars = originalName.Where(c => isEnglishLetterOrDigit(c) || c == '_').ToArray();
-    var cleanedName = new string(validChars);
-    
-
-    string newName;
-    switch (symbol)
+    private string GenerateCorrectName(ISymbol symbol)
     {
-        case IMethodSymbol _:
-            newName = SuitableClassMethodName(originalName);
-            break;
-        case INamedTypeSymbol namedSymbol when namedSymbol.TypeKind == TypeKind.Class:
-   
-            newName = SuitableClassMethodName(originalName);
-            break;
-        case ILocalSymbol _:
+        var originalName = symbol.Name;
 
-            newName = SuitableLocalVarName(originalName);
-            break;
-        case IFieldSymbol fieldSymbol when fieldSymbol.IsConst:
+        // Clean the original name by removing invalid characters
+        var validChars = originalName.Where(c => isEnglishLetterOrDigit(c) || c == '_').ToArray();
+        var cleanedName = new string(validChars);
 
-            newName = SuitableGlobalConstVarName(originalName);
-            break;
-        default:
-            newName = cleanedName; 
-            break;
+        // Handle edge cases for empty or invalid names
+        if (string.IsNullOrEmpty(cleanedName) || cleanedName.All(c => c == '_'))
+        {
+            // Use fallback names based on symbol type
+            return symbol switch
+            {
+                IMethodSymbol => "FixMeMethod",
+                INamedTypeSymbol namedSymbol when namedSymbol.TypeKind == TypeKind.Class => "FixMeClass",
+                ILocalSymbol => "fixMeVariable",
+                IFieldSymbol fieldSymbol when fieldSymbol.IsConst => "FIX_ME_CONST",
+                _ => "FixMe"
+            };
+        }
+
+        // Determine the correct naming convention based on the symbol type
+        string newName = symbol switch
+        {
+            IMethodSymbol => SuitableClassMethodName(cleanedName),
+            INamedTypeSymbol namedSymbol when namedSymbol.TypeKind == TypeKind.Class => SuitableClassMethodName(cleanedName),
+            ILocalSymbol => SuitableLocalVarName(cleanedName),
+            IFieldSymbol fieldSymbol when fieldSymbol.IsConst => SuitableGlobalConstVarName(cleanedName),
+            _ => cleanedName // Default to cleaned name for unsupported types
+        };
+
+        return newName;
     }
-
-
-
-    return newName;
-}
 
 private string SuitableClassMethodName(string originalName)
 {
     if (string.IsNullOrEmpty(originalName))
     {
-        return "FixMe"; 
+        return "UnnamedClassOrMethod"; 
     }
     
     
@@ -155,7 +152,10 @@ private string SuitableClassMethodName(string originalName)
 
 
     string transformedName = new string(chars);
-
+    if (string.IsNullOrEmpty(transformedName))
+    {
+        return "unnammedLocalVariable"; 
+    }
 
     return transformedName;
 }
@@ -165,7 +165,7 @@ private string SuitableLocalVarName(string originalName)
 {
     if (string.IsNullOrEmpty(originalName))
     {
-        return "fixMe"; 
+        return "unnammedLocalVariable"; 
     }
     
 
@@ -198,7 +198,11 @@ private string SuitableLocalVarName(string originalName)
 
 
     string transformedName = new string(chars);
-
+    
+    if (string.IsNullOrEmpty(transformedName))
+    {
+        return "unnammedLocalVariable"; 
+    }
 
     return transformedName;
 }
@@ -208,7 +212,7 @@ private string SuitableGlobalConstVarName(string originalName)
 {
     if (string.IsNullOrEmpty(originalName))
     {
-        return "FIX_ME"; 
+        return "UNNAMED_GLOBAL_CONST"; 
     }
     
 
@@ -219,6 +223,16 @@ private string SuitableGlobalConstVarName(string originalName)
     cleanedName=cleanedName.TrimEnd('_');
      cleanedName = Regex.Replace(cleanedName, "_+", "_");
      cleanedName = cleanedName.ToUpper();
+     
+     // Check if cleanedName is empty after cleaning
+     if (string.IsNullOrEmpty(cleanedName) || cleanedName == "_")
+     {
+         return "UNNAMED_GLOBAL_CONST";
+     }
+     
+     
      return cleanedName;
+     
+     
     }
 }

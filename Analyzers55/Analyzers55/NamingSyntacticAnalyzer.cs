@@ -9,16 +9,9 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Analyzers55
 {
-    /// <summary>
-    /// Analyzer for reporting syntax node diagnostics.
-    /// It reports diagnostics for implicitly typed local variables, recommending explicit type specification.
-    /// </summary>
-    /// <remarks>
-    /// For analyzers that requires analyzing symbols or syntax nodes across compilation, see <see cref="CompilationStartedAnalyzer"/> and <see cref="CompilationStartedAnalyzerWithCompilationWideAnalysis"/>.
-    /// For analyzers that requires analyzing symbols or syntax nodes across a code block, see <see cref="CodeBlockStartedAnalyzer"/>.
-    /// </remarks>
+
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
-    public class MyAnalyzer : DiagnosticAnalyzer
+    public class NamingSyntacticAnalyzer : DiagnosticAnalyzer
     {
         public const string DiagnosticId = "CS236651";
 
