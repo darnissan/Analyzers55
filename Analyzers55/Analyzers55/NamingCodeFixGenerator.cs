@@ -84,14 +84,14 @@ public class NamingCodeFixGenerator : CodeFixProvider
     {
         var originalName = symbol.Name;
 
-        // Clean the original name by removing invalid characters
+      
         var validChars = originalName.Where(c => isEnglishLetterOrDigit(c) || c == '_').ToArray();
         var cleanedName = new string(validChars);
 
-        // Handle edge cases for empty or invalid names
+      
         if (string.IsNullOrEmpty(cleanedName) || cleanedName.All(c => c == '_'))
         {
-            // Use fallback names based on symbol type
+         
             return symbol switch
             {
                 IMethodSymbol => "FixMeMethod",
@@ -102,14 +102,18 @@ public class NamingCodeFixGenerator : CodeFixProvider
             };
         }
 
-        // Determine the correct naming convention based on the symbol type
+
         string newName = symbol switch
         {
             IMethodSymbol => SuitableClassMethodName(cleanedName),
-            INamedTypeSymbol namedSymbol when namedSymbol.TypeKind == TypeKind.Class => SuitableClassMethodName(cleanedName),
+            INamedTypeSymbol namedSymbol when namedSymbol.TypeKind == TypeKind.Class => SuitableClassMethodName(
+                cleanedName),
             ILocalSymbol => SuitableLocalVarName(cleanedName),
-            IFieldSymbol fieldSymbol when fieldSymbol.IsConst => SuitableGlobalConstVarName(cleanedName),
-            _ => cleanedName // Default to cleaned name for unsupported types
+            IFieldSymbol fieldSymbol when
+                (fieldSymbol.IsConst && fieldSymbol.DeclaredAccessibility == Accessibility.Public)
+                || (fieldSymbol.IsStatic && fieldSymbol.IsReadOnly)
+                => SuitableGlobalConstVarName(cleanedName),
+            _ => cleanedName
         };
 
         return newName;
