@@ -104,7 +104,7 @@ namespace Analyzers55
             if ((symbolKind == SymbolKind.Field && context.Symbol is IFieldSymbol fieldSymbol))
             {
                 if ((fieldSymbol.IsConst && fieldSymbol.DeclaredAccessibility == Accessibility.Public )||
-                    (fieldSymbol.IsStatic && fieldSymbol.IsReadOnly)) // also catch static readonly
+                    (fieldSymbol.IsStatic && fieldSymbol.IsReadOnly)) 
                 {
                     if (!SNAKE_CASE_REGEX.IsMatch(fieldSymbol.Name))
                     {

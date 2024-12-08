@@ -123,7 +123,7 @@ private string SuitableClassMethodName(string originalName)
 {
     if (string.IsNullOrEmpty(originalName))
     {
-        return "UnnamedClassOrMethod"; 
+        return "FixMeMethodOrClass"; 
     }
     
     
@@ -158,7 +158,7 @@ private string SuitableClassMethodName(string originalName)
     string transformedName = new string(chars);
     if (string.IsNullOrEmpty(transformedName))
     {
-        return "unnammedLocalVariable"; 
+        return "FixMeMethodOrClass"; 
     }
 
     return transformedName;
@@ -169,7 +169,7 @@ private string SuitableLocalVarName(string originalName)
 {
     if (string.IsNullOrEmpty(originalName))
     {
-        return "unnammedLocalVariable"; 
+        return "fixMeVariable"; 
     }
     
 
@@ -205,7 +205,7 @@ private string SuitableLocalVarName(string originalName)
     
     if (string.IsNullOrEmpty(transformedName))
     {
-        return "unnammedLocalVariable"; 
+        return "fixMeVariable"; 
     }
 
     return transformedName;
@@ -216,7 +216,7 @@ private string SuitableGlobalConstVarName(string originalName)
 {
     if (string.IsNullOrEmpty(originalName))
     {
-        return "UNNAMED_GLOBAL_CONST"; 
+        return "FIX_ME_CONST"; 
     }
     
 
@@ -228,10 +228,10 @@ private string SuitableGlobalConstVarName(string originalName)
      cleanedName = Regex.Replace(cleanedName, "_+", "_");
      cleanedName = cleanedName.ToUpper();
      
-     // Check if cleanedName is empty after cleaning
+
      if (string.IsNullOrEmpty(cleanedName) || cleanedName == "_")
      {
-         return "UNNAMED_GLOBAL_CONST";
+         return "FIX_ME_CONST";
      }
      
      

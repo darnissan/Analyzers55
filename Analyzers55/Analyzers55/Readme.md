@@ -1,60 +1,101 @@
-# HW1 - C# Linter
+# C# Linter for CS236651 Naming Conventions
 
+This project is a simple C# linter that enforces the naming conventions specified in the CS236651 course at the Technion. It focuses on identifier names and provides code fixes to ensure compliance with the defined policies.
 
-This project is simple C# linter that follows the policy provided in CS236651 course in the Technion
-It focuses on identifier names and providing code fixes.
+*Authored by Dar Nissan - [dar.nissan@campus.technion.ac.il](mailto:dar.nissan@campus.technion.ac.il)*
 
-written by Dar Nissan - dar.nissan@campus.technion.ac.il
+---
 
+## Naming Conventions Policy
 
-## Policy
--	No identifier shall contain a character that is not a lowercase letter, an uppercase letter, a number or an underscore.
--	Class names and method names should be written in UpperCamelCase, that is, multiple words must be concatenated while having the first letter as uppercase and the rest of the letters as lowercase. They must not contain underscores.
--	Local variable names should be written in lowerCamelCase, that is, multiple words are concatenated as in UpperCamelCase, except the first word is all lowercase. They must not contain underscores.
--	Global constant names should be written in SNAKE_CASE, that is, multiple words are each in all-uppercase and connected using underscores. They should not contain numbers or lowercase letters.
+- **Allowed Characters**: Identifiers may only contain lowercase letters, uppercase letters, numbers, or underscores. No other characters are permitted.
+- **Class and Method Names**: Should be written in **UpperCamelCase**. This means multiple words are concatenated without spaces, and each word starts with an uppercase letter followed by lowercase letters. Underscores are not allowed.
+- **Local Variable Names**: Should follow **lowerCamelCase**. Similar to UpperCamelCase, but the first word starts with a lowercase letter. Subsequent words start with an uppercase letter. Underscores are not allowed.
+- **Global Constant Names**: Should be in **SNAKE_CASE**. Each word is in all uppercase letters, and words are separated by underscores. Numbers or lowercase letters are not permitted.
 
+---
 
-# Linter's Approach
+## Linter's Approach
 
+### Capturing Target Identifiers
 
-## Capturing desired identifiers
-The linters uses the fact the c# and Roslyn is using [SymbolKind](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.symbolkind?view=roslyn-dotnet-4.9.0) to all of it's identifiers. this way the desired identifiers are captures with the analyzer.
+The linter leverages C# and Roslyn's use of [`SymbolKind`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.codeanalysis.symbolkind) to identify and analyze symbols in the code. This allows the analyzer to focus on specific kinds of identifiers that need to adhere to the naming conventions.
 
-It should be mentions that SymbolKind.Local IS NOT supported with Roslyn analyzers and so to follow the policy the linter uses [LocalDeclarationStatementSyntax](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/declarations) and goes over all of it's variables to apply policy
+However, it's important to note that `SymbolKind.Local` is **not** supported in Roslyn analyzers. To address this limitation and enforce the policy on local variables, the linter utilizes [`LocalDeclarationStatementSyntax`](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/local-variable-declaration) to iterate over local variable declarations and apply the naming rules accordingly.
 
-In addition. global constant is a bit underspecified term in the context of C# since it doesn't support preprocesssiong define like other simmilar languages. In this linter global constant is every field that matches both const keyword and public , or , both static and readonly keywords. 
+Regarding **global constants**, C# does not have a preprocessor `#define` like some other languages, so the term is a bit ambiguous. In this linter:
 
-## Dealing with invalid characters
-As it list below to check if we match the naming conventions we can use regular expressions but unfortunatly that doesnt help us fix invalid characters. Also C# built in [IsLetter](https://learn.microsoft.com/en-us/dotnet/api/system.char.isletter?view=net-9.0) is letting ANY valid unicode character.Thus, it was decided to implement a simple is english characters checker to avoid identifiers that are sytaxly valid but mix up several different languges in the same identifier
+- A **global constant** is considered any field that is declared with both the `const` keyword and `public` access modifier.
+- Additionally, fields declared with both `static` and `readonly` keywords are treated as global constants for the purposes of naming enforcement.
 
-## Regular Expressions
-The linter uses the following regular expressions to follow the policy
+### Handling Invalid Characters
 
-```cs
-UpperCamelCaseRegex = new Regex(@"^([A-Z][a-z]*[0-9]*)+$"
-lowerCamelCaseRegex = new Regex(@"^[a-z]+[0-9]*([A-Z][a-z]*[0-9]*)*$"
-SNAKE_CASE_REGEX = new Regex(@"^[A-Z]+([_][A-Z]+)*$"
-```
+While regular expressions are effective for checking naming patterns, they are insufficient for handling invalid characters within identifiers. The built-in C# method [`Char.IsLetter`](https://learn.microsoft.com/en-us/dotnet/api/system.char.isletter) recognizes any valid Unicode letter, which might include letters from various languages and scripts.
 
-# Code-Fix Generator
+To prevent identifiers that mix characters from different languages (which, while syntactically valid, could lead to confusion and maintainability issues), the linter implements a custom method to check for English letters only. This ensures that identifiers consist solely of English letters, digits, and underscores, adhering to the defined policy.
 
-## Auto-Generating Identifier Valid New Name
-The code-fix generator is using the invalid identifier name to generate a new valid one.
-it goes over all of it's characters one by one, dropping the invalid ones and switching the case of the letters to match the required policy.
+### Regular Expressions Used
 
-## Fallback Names
+The linter utilizes the following regular expressions to validate naming conventions:
 
-The code fix provider is implementing a fallback names to handle some edge cases like
+- **UpperCamelCase**:
 
-```cs
+  ```csharp
+  UpperCamelCaseRegex = new Regex(@"^([A-Z][a-z]*[0-9]*)+$");
+  ```
+
+- **lowerCamelCase**:
+
+  ```csharp
+  lowerCamelCaseRegex = new Regex(@"^[a-z]+[0-9]*([A-Z][a-z]*[0-9]*)*$");
+  ```
+
+- **SNAKE_CASE**:
+
+  ```csharp
+  SNAKE_CASE_REGEX = new Regex(@"^[A-Z]+(_[A-Z]+)*$");
+  ```
+
+These expressions ensure that identifiers match the specified patterns for each naming convention.
+
+---
+
+## Code-Fix Generator
+
+### Auto-Generating Valid Identifier Names
+
+The code-fix generator automatically creates valid identifier names based on the invalid ones detected by the linter. It processes each character of the original name:
+
+- **Invalid Characters**: Removes any characters that are not English letters, digits, or underscores.
+- **Case Adjustment**: Adjusts the case of letters to match the required naming convention (e.g., converting to uppercase or lowercase where appropriate).
+
+By automating this transformation, the code-fix generator helps developers quickly comply with the naming policies without manual renaming.
+
+### Fallback Names for Edge Cases
+
+In some situations, an invalid identifier might not contain enough information to generate a meaningful name (e.g., when the name consists solely of invalid characters). For these edge cases, the code-fix provider uses predefined fallback names to ensure that the code remains functional and compliant.
+
+**Example:**
+
+Given the code:
+
+```csharp
 public const int _ = 7;
 ```
-This will be resulted in
 
-```cs
+After applying the code fix, it would become:
+
+```csharp
 public const int FIX_ME_CONST = 7;
 ```
 
+In this example, since the original name `_` doesn't provide meaningful context, the fallback name `FIX_ME_CONST` is used to indicate that the constant needs to be properly named.
+
+---
+
+By adhering to these conventions and utilizing the linter and code-fix generator, developers can maintain consistent and readable code that aligns with the course's standards.
 
 
+# Extra Challenge
 
+Unfortunately, due to poor time management on my side I wasn't able to complete the challenge.  I hope to revisit it someday ! 
